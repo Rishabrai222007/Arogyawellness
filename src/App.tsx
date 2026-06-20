@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Heart, Phone, User, Mail, Calendar, Weight, Ruler, ChevronDown, 
+  Heart, Phone, User, Mail, Calendar, Weight, Ruler, ChevronDown, ChevronLeft, ChevronRight,
   Sparkles, ShieldCheck, CheckCircle2, Users, Check, Trash2, Clock, 
   ArrowRight, Lock, MessageCircle, AlertCircle, TrendingDown, 
   CheckSquare, Award, Flame, Settings, ClipboardList, Activity, MapPin, 
@@ -74,8 +74,59 @@ export default function App() {
   const [submittedLead, setSubmittedLead] = useState<ConsultationLead | null>(null);
 
   // Interactive schedule slot choice in success modal
-  const [selectedDate, setSelectedDate] = useState('Tomorrow');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('11:00 AM - 11:15 AM');
+  const [calendarDate, setCalendarDate] = useState<Date>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  });
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('10:00 AM - 11:00 AM');
+  const [showFullCalendar, setShowFullCalendar] = useState(false);
+  const [currentCalMonth, setCurrentCalMonth] = useState<Date>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  });
+
+  const getAvailableTimeSlots = (dateObj: Date) => {
+    const isSun = dateObj.getDay() === 0;
+    const startHour = isSun ? 4 : 6;
+    const endHour = 20; // 8:00 PM
+    
+    const slots: string[] = [];
+    for (let hr = startHour; hr < endHour; hr++) {
+      const formattedStart = hr === 12 
+        ? '12:00 PM' 
+        : hr > 12 
+          ? `${String(hr - 12).padStart(2, '0')}:00 PM` 
+          : `${String(hr).padStart(2, '0')}:00 AM`;
+          
+      const nextHr = hr + 1;
+      const formattedEnd = nextHr === 12 
+        ? '12:00 PM' 
+        : nextHr > 12 
+          ? `${String(nextHr - 12).padStart(2, '0')}:00 PM` 
+          : `${String(nextHr).padStart(2, '0')}:00 AM`;
+          
+      slots.push(`${formattedStart} - ${formattedEnd}`);
+    }
+    return slots;
+  };
+
+  // Automatically update the readable date representation string and check hour slots
+  useEffect(() => {
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    setSelectedDate(calendarDate.toLocaleDateString('en-US', options));
+  }, [calendarDate]);
+
+  // Sync / validate selected time slot with the current date rules
+  useEffect(() => {
+    const slots = getAvailableTimeSlots(calendarDate);
+    if (!slots.includes(selectedTimeSlot)) {
+      const midday = slots.find(s => s.startsWith('10:00 AM') || s.startsWith('11:00 AM')) || slots[0];
+      setSelectedTimeSlot(midday);
+    }
+  }, [calendarDate]);
 
   // Calculated Real-Time Metrics (BMI Tracker)
   const [liveBmi, setLiveBmi] = useState<number | null>(null);
@@ -1611,7 +1662,7 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white/80 backdrop-blur-xl rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-white/60"
+              className="bg-white/80 backdrop-blur-xl rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl relative overflow-y-auto max-h-[90vh] border border-white/60 scrollbar-thin"
             >
               {/* Dynamic light reflection color band */}
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-medium to-brand-orange"></div>
@@ -1658,45 +1709,166 @@ export default function App() {
               </div>
 
               {/* Interactive Calendar/Time Booking Inside modal */}
-              <div className="mt-5 space-y-3">
-                <label className="block text-[10px] font-black uppercase text-stone-400 tracking-wider">
-                  Select consultation slot day & time
-                </label>
-                
-                {/* Dates Selector */}
-                <div className="grid grid-cols-3 gap-2">
-                  {['Today (Urgent)', 'Tomorrow', 'Day After'].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setSelectedDate(d)}
-                      className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                        selectedDate === d 
-                          ? 'border-brand-medium bg-brand-medium text-white shadow-xs' 
-                          : 'border-white/60 bg-white/40 text-stone-600 hover:bg-white'
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase text-[#113a25] tracking-wider">
+                    Select Consultation Day
+                  </label>
+                  <span className="text-[10px] font-bold text-brand-orange">
+                    {calendarDate.getDay() === 0 ? '✨ Sunday Schedule (4 AM - 8 PM)' : '🌿 Mon - Sat Schedule (6 AM - 8 PM)'}
+                  </span>
                 </div>
 
-                {/* Time selector */}
-                <div className="grid grid-cols-2 gap-2">
-                  {['11:00 AM - 11:15 AM', '02:30 PM - 02:45 PM', '04:00 PM - 4:15 PM', '06:30 PM - 6:45 PM'].map((t) => (
+                {/* Date quick picker + Option to trigger full calendar */}
+                <div className="bg-white/50 border border-white/80 p-3 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-7 h-7 bg-emerald-50 text-brand-medium rounded-lg flex items-center justify-center shrink-0 border border-emerald-100">
+                        <Calendar className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-xs font-extrabold text-[#113a25] truncate">
+                        {selectedDate}
+                      </span>
+                    </div>
+
                     <button
-                      key={t}
                       type="button"
-                      onClick={() => setSelectedTimeSlot(t)}
-                      className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                        selectedTimeSlot === t 
-                          ? 'border-brand-orange bg-[#ffeeda] text-brand-orange shadow-xs' 
-                          : 'border-white/60 bg-white/40 text-stone-600 hover:bg-white'
-                      }`}
+                      onClick={() => setShowFullCalendar(!showFullCalendar)}
+                      className="text-[11px] bg-brand-medium hover:bg-brand-dark text-white font-bold py-1 px-2.5 rounded-lg transition-colors cursor-pointer shrink-0 flex items-center gap-1"
                     >
-                      {t}
+                      <span>{showFullCalendar ? 'Close Calendar' : 'Change Date'}</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${showFullCalendar ? 'rotate-180' : ''}`} />
                     </button>
-                  ))}
+                  </div>
+
+                  {/* FULL MONTH CALENDAR CONTAINER WITH ANIMATION */}
+                  <AnimatePresence>
+                    {showFullCalendar && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden border-t border-stone-150 pt-2"
+                      >
+                        {/* Calendar Header with Month Toggle */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-black text-stone-700 font-display">
+                            {currentCalMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const prev = new Date(currentCalMonth.getFullYear(), currentCalMonth.getMonth() - 1, 1);
+                                const todayVal = new Date();
+                                if (prev.getFullYear() > todayVal.getFullYear() || 
+                                    (prev.getFullYear() === todayVal.getFullYear() && prev.getMonth() >= todayVal.getMonth())) {
+                                  setCurrentCalMonth(prev);
+                                }
+                              }}
+                              className="w-6 h-6 rounded-lg border border-stone-200 hover:bg-stone-50 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = new Date(currentCalMonth.getFullYear(), currentCalMonth.getMonth() + 1, 1);
+                                setCurrentCalMonth(next);
+                              }}
+                              className="w-6 h-6 rounded-lg border border-stone-200 hover:bg-stone-50 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-stone-400 mb-1.5">
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                            <div key={day} className="py-0.5">{day}</div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1">
+                          {/* Blank padding items */}
+                          {Array.from({ length: new Date(currentCalMonth.getFullYear(), currentCalMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                            <div key={`empty-${i}`} className="py-1"></div>
+                          ))}
+
+                          {/* Day Numbers */}
+                          {Array.from({ length: new Date(currentCalMonth.getFullYear(), currentCalMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                            const dNum = i + 1;
+                            const dDate = new Date(currentCalMonth.getFullYear(), currentCalMonth.getMonth(), dNum);
+                            const todayCheck = new Date();
+                            todayCheck.setHours(0,0,0,0);
+                            
+                            const isPast = dDate < todayCheck;
+                            const isSelected = calendarDate.getDate() === dNum && 
+                                               calendarDate.getMonth() === currentCalMonth.getMonth() && 
+                                               calendarDate.getFullYear() === currentCalMonth.getFullYear();
+
+                            return (
+                              <button
+                                key={`day-${dNum}`}
+                                type="button"
+                                disabled={isPast}
+                                onClick={() => {
+                                  setCalendarDate(dDate);
+                                }}
+                                className={`py-1.5 rounded-lg text-[11px] font-bold transition-all relative cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-brand-medium text-white shadow-xs'
+                                    : isPast
+                                      ? 'text-stone-300 cursor-not-allowed opacity-45'
+                                      : 'text-stone-700 hover:bg-[#ecf7f1] hover:text-brand-medium'
+                                }`}
+                              >
+                                {dNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Step 2: Choose Hourly Timing with Responsive Scrollable Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] font-black uppercase text-stone-400 tracking-wider">
+                      Select Timing Range (Hourly)
+                    </label>
+                    <span className="text-[10px] text-stone-500 font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-brand-orange" />
+                      Active: {selectedTimeSlot}
+                    </span>
+                  </div>
+
+                  {/* High Quality scrollable container for time slots, styled compact for both mobile and computer */}
+                  <div className="max-h-[175px] overflow-y-auto border border-stone-200/60 bg-white/40 backdrop-blur-xs rounded-2xl p-2.5 space-y-2 scrollable-box shadow-inner">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {getAvailableTimeSlots(calendarDate).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setSelectedTimeSlot(t)}
+                          className={`py-2 px-1.5 rounded-xl border text-[11px] font-extrabold transition-all cursor-pointer text-center truncate ${
+                            selectedTimeSlot === t 
+                              ? 'border-brand-orange bg-[#ffeeda] text-brand-orange shadow-xs' 
+                              : 'border-white/70 bg-white/70 text-stone-600 hover:bg-white hover:border-stone-300'
+                          }`}
+                          title={t}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-[9px] text-stone-400 mt-1 block italic text-center">
+                    Many users prefer morning 08:00 AM - 09:00 AM / evening 06:00 PM - 07:00 PM slots for quick chat.
+                  </span>
                 </div>
               </div>
 
