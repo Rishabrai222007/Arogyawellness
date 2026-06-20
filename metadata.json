@@ -1,0 +1,6 @@
+{
+  "name": "Arogya Wellness",
+  "description": "Premium health and nutrition consultation portal featuring an interactive health assessment, tailored wellness programs, real success transformations, and expert scheduling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
