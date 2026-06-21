@@ -34,6 +34,33 @@ const formItemVariants = {
   }
 };
 
+const CONFETTI_COLORS = ['#10b981', '#f97316', '#3b82f6', '#f43f5e', '#eab308', '#a855f7'];
+
+const generateConfetti = () => {
+  return Array.from({ length: 65 }).map((_, idx) => {
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 80 + Math.random() * 200;
+    const x = Math.cos(angle) * velocity;
+    const y = Math.sin(angle) * velocity - 55;
+    const size = 6 + Math.random() * 8;
+    const delay = Math.random() * 0.15;
+    const shape = Math.floor(Math.random() * 3); // 0 = circle, 1 = square, 2 = triangle
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    const rotate = Math.random() * 360;
+    
+    return {
+      id: idx,
+      x,
+      y,
+      size,
+      delay,
+      shape,
+      color,
+      rotate
+    };
+  });
+};
+
 export default function App() {
   // Database state (retrieved from and saved to localStorage)
   const [submissions, setSubmissions] = useState<ConsultationLead[]>([]);
@@ -87,6 +114,12 @@ export default function App() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow;
   });
+
+  // Generate active confetti particles whenever success modal is shown
+  const confettiParticles = React.useMemo(() => {
+    if (!showSuccessModal) return [];
+    return generateConfetti();
+  }, [showSuccessModal]);
 
   const getAvailableTimeSlots = (dateObj: Date) => {
     const isSun = dateObj.getDay() === 0;
@@ -1667,9 +1700,78 @@ export default function App() {
               {/* Dynamic light reflection color band */}
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-medium to-brand-orange"></div>
 
-              {/* Celebration Icon */}
-              <div className="mx-auto w-14 h-14 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-emerald-100/55">
-                <Check className="w-7 h-7 text-brand-medium stroke-[3]" />
+              {/* Confetti Explosion Layer */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-3xl z-40">
+                {confettiParticles.map((p) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ x: 0, y: 0, scale: 0, opacity: 1, rotate: 0 }}
+                    animate={{
+                      x: p.x,
+                      y: p.y + 110, // gravity fall simulation
+                      scale: [0, 1, 1, 0.8, 0],
+                      opacity: [1, 1, 0.9, 0.7, 0],
+                      rotate: p.rotate + 540
+                    }}
+                    transition={{
+                      duration: 1.8 + Math.random() * 0.7,
+                      ease: 'easeOut',
+                      delay: p.delay
+                    }}
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '12%', // aligned with checkmark icon
+                      width: p.size,
+                      height: p.shape === 0 ? p.size : p.shape === 1 ? p.size * 0.5 : p.size,
+                      backgroundColor: p.color,
+                      borderRadius: p.shape === 0 ? '50%' : p.shape === 1 ? '1px' : '0%',
+                      clipPath: p.shape === 2 ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : undefined,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Celebration Animated Checkmark Icon with Spring Waves */}
+              <div className="relative mb-5 flex justify-center">
+                <motion.div 
+                  initial={{ scale: 0, rotate: -25 }}
+                  animate={{ 
+                    scale: 1, 
+                    rotate: 0,
+                    transition: {
+                      type: "spring",
+                      stiffness: 260,
+                      damping: 14,
+                      delay: 0.15
+                    }
+                  }}
+                  className="w-16 h-16 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-full flex items-center justify-center shadow-md border-2 border-brand-medium relative z-10"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.35, type: "spring", stiffness: 350, damping: 11 }}
+                  >
+                    <Check className="w-8 h-8 text-brand-medium stroke-[3.5]" />
+                  </motion.div>
+                  
+                  {/* Outer ripple ring */}
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0.6 }}
+                    animate={{ scale: 1.6, opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+                    className="absolute inset-0 rounded-full border-2 border-brand-medium/50 pointer-events-none"
+                  />
+                  {/* Secondary delayed pulse ring */}
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0.4 }}
+                    animate={{ scale: 2.1, opacity: 0 }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut", delay: 0.6 }}
+                    className="absolute inset-0 rounded-full border border-brand-medium/30 pointer-events-none"
+                  />
+                </motion.div>
               </div>
 
               <h3 className="font-display font-black text-2xl text-center text-brand-dark leading-tight">
